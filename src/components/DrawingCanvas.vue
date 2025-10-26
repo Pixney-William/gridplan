@@ -425,7 +425,8 @@ const handleMouseDown = (e) => {
       if (element) {
         store.selectElement(element.id)
         isDragging.value = true
-        dragStartPos.value = { x: pos.x, y: pos.y }
+        // Store snapped position for grid-aligned dragging
+        dragStartPos.value = { x: snappedX, y: snappedY }
         // Store copy of element start state for dragging
         dragElementStart.value = JSON.parse(JSON.stringify(element))
       } else {
@@ -537,8 +538,12 @@ const handleMouseMove = (e) => {
   // Handle dragging of selected element
   if (isDragging.value && store.selectedElementId && dragElementStart.value) {
     const pos = getRelativePointerPosition()
-    const dx = pos.x - dragStartPos.value.x
-    const dy = pos.y - dragStartPos.value.y
+
+    // Snap current position to grid for smooth grid-aligned dragging
+    const snappedX = snapToGrid(pos.x)
+    const snappedY = snapToGrid(pos.y)
+    const dx = snappedX - dragStartPos.value.x
+    const dy = snappedY - dragStartPos.value.y
 
     const element = dragElementStart.value
     const updates = {}
