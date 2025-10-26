@@ -8,6 +8,23 @@
       @mouseup="handleMouseUp"
       @wheel="handleWheel"
     >
+      <!-- Background image layer -->
+      <v-layer ref="backgroundLayer">
+        <v-image
+          v-if="backgroundImageObj"
+          :config="{
+            image: backgroundImageObj,
+            x: store.backgroundImage.x,
+            y: store.backgroundImage.y,
+            width: store.backgroundImage.width,
+            height: store.backgroundImage.height,
+            opacity: store.backgroundImage.opacity,
+            draggable: !store.backgroundImage.locked && store.currentTool === 'select',
+          }"
+          @dragend="handleImageDragEnd"
+        />
+      </v-layer>
+
       <!-- Grid layer -->
       <v-layer ref="gridLayer">
         <v-line
@@ -238,6 +255,17 @@
             dash: [5, 5],
           }"
         />
+
+        <!-- Calibration line preview -->
+        <v-line
+          v-if="isDrawingCalibration && calibrationPoints.length === 4"
+          :config="{
+            points: calibrationPoints,
+            stroke: '#f97316',
+            strokeWidth: 3,
+            dash: [10, 5],
+          }"
+        />
       </v-layer>
     </v-stage>
   </div>
@@ -250,6 +278,7 @@ import { useDrawingStore } from '../stores/drawing'
 const store = useDrawingStore()
 const container = ref(null)
 const stage = ref(null)
+const backgroundImageObj = ref(null)
 
 const stageConfig = ref({
   width: 800,
@@ -273,6 +302,8 @@ const dragElementStart = ref(null)
 const isDraggingVertex = ref(false)
 const selectedVertexIndex = ref(-1)
 const vertexDragStart = ref({ x: 0, y: 0 })
+const isDrawingCalibration = ref(false)
+const calibrationPoints = ref([])
 
 // Grid lines
 const gridLines = computed(() => {
@@ -578,6 +609,12 @@ const handleMouseDown = (e) => {
       // Start drawing room
       isDrawing.value = true
       currentPoints.value = [snappedX, snappedY, snappedX, snappedY]
+    } else if (store.currentTool === 'calibrate') {
+      // Calibration line drawing
+      if (!isDrawingCalibration.value) {
+        isDrawingCalibration.value = true
+        calibrationPoints.value = [pos.x, pos.y, pos.x, pos.y]
+      }
     }
   }
 }
@@ -695,6 +732,18 @@ const handleMouseMove = (e) => {
     return
   }
 
+  // Update calibration line preview
+  if (isDrawingCalibration.value && store.currentTool === 'calibrate') {
+    const pos = getRelativePointerPosition()
+    calibrationPoints.value = [
+      calibrationPoints.value[0],
+      calibrationPoints.value[1],
+      pos.x,
+      pos.y,
+    ]
+    return
+  }
+
   if (isDrawing.value && (store.currentTool === 'line' || store.currentTool === 'room')) {
     const pos = getRelativePointerPosition()
     const snappedX = snapToGrid(pos.x)
@@ -726,6 +775,35 @@ const handleMouseUp = () => {
   if (isDragging.value) {
     isDragging.value = false
     dragElementStart.value = null
+    return
+  }
+
+  // Complete calibration line
+  if (isDrawingCalibration.value) {
+    isDrawingCalibration.value = false
+    const x1 = calibrationPoints.value[0]
+    const y1 = calibrationPoints.value[1]
+    const x2 = calibrationPoints.value[2]
+    const y2 = calibrationPoints.value[3]
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const lineLength = Math.sqrt(dx * dx + dy * dy)
+
+    if (lineLength > 10) {
+      // Prompt for actual measurement
+      const actualMeters = prompt(`This line is ${lineLength.toFixed(0)} pixels.\nEnter actual length in meters:`)
+      if (actualMeters && !isNaN(parseFloat(actualMeters))) {
+        const meters = parseFloat(actualMeters)
+        const metersPerPixel = meters / lineLength
+        // Update grid unit to match
+        const newGridUnit = metersPerPixel * store.gridSize
+        store.updateSettings({
+          gridUnit: newGridUnit
+        })
+        alert(`Calibration applied!\nScale: ${metersPerPixel.toFixed(4)} meters/pixel\nGrid: ${newGridUnit.toFixed(2)}m per square`)
+      }
+    }
+    calibrationPoints.value = []
     return
   }
 
@@ -845,4 +923,25 @@ onMounted(() => {
 watch(() => store.currentTool, () => {
   cancelPolygon()
 })
+
+// Watch for background image changes and load image
+watch(() => store.backgroundImage.dataUrl, (dataUrl) => {
+  if (dataUrl) {
+    const img = new window.Image()
+    img.onload = () => {
+      backgroundImageObj.value = img
+    }
+    img.src = dataUrl
+  } else {
+    backgroundImageObj.value = null
+  }
+})
+
+// Handle background image drag end
+const handleImageDragEnd = (e) => {
+  store.updateBackgroundImage({
+    x: e.target.x(),
+    y: e.target.y()
+  })
+}
 </script>

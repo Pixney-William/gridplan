@@ -10,7 +10,7 @@ export const useDrawingStore = defineStore('drawing', {
     pricePerSqm: 25000,  // SEK per square meter
 
     // Drawing tool
-    currentTool: 'select', // 'select', 'line', 'door', 'window', 'room', 'room-polygon'
+    currentTool: 'select', // 'select', 'line', 'door', 'window', 'room', 'room-polygon', 'calibrate'
 
     // Drawing elements
     elements: [],
@@ -34,6 +34,17 @@ export const useDrawingStore = defineStore('drawing', {
     // Saved drawings
     currentDrawingId: null,
     currentDrawingName: '',
+
+    // Background reference image (not saved)
+    backgroundImage: {
+      dataUrl: null,
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      opacity: 0.5,
+      locked: false,
+    },
   }),
 
   getters: {
@@ -185,6 +196,32 @@ export const useDrawingStore = defineStore('drawing', {
       this.historyIndex = -1
       this.currentDrawingId = null
       this.currentDrawingName = ''
+    },
+
+    setBackgroundImage(imageData) {
+      this.backgroundImage = {
+        ...this.backgroundImage,
+        ...imageData
+      }
+    },
+
+    updateBackgroundImage(updates) {
+      this.backgroundImage = {
+        ...this.backgroundImage,
+        ...updates
+      }
+    },
+
+    clearBackgroundImage() {
+      this.backgroundImage = {
+        dataUrl: null,
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        opacity: 0.5,
+        locked: false,
+      }
     },
 
     loadDrawing(drawing) {

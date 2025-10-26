@@ -6,7 +6,8 @@
     <!-- Main content area -->
     <div class="flex-1 flex overflow-hidden">
       <!-- Sidebar -->
-      <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div class="w-64 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
+        <BackgroundImageControls />
         <GridConfig />
         <MeasurementPanel />
         <SavedDrawings />
@@ -22,6 +23,7 @@
 
 <script setup>
 import Toolbar from './components/Toolbar.vue'
+import BackgroundImageControls from './components/BackgroundImageControls.vue'
 import GridConfig from './components/GridConfig.vue'
 import MeasurementPanel from './components/MeasurementPanel.vue'
 import SavedDrawings from './components/SavedDrawings.vue'
