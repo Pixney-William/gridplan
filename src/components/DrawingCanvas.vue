@@ -265,17 +265,55 @@
         />
       </v-layer>
     </v-stage>
+
+    <!-- Brave Shield Warning Dialog -->
+    <Teleport to="body">
+      <Dialog v-model:open="showBraveWarning">
+        <DialogContent class="z-[9999] !bg-white !text-gray-900" style="background: white !important; color: #111 !important;">
+          <DialogHeader>
+            <DialogTitle class="!text-gray-900">Browser Compatibility Warning</DialogTitle>
+            <DialogDescription class="!text-gray-700">
+              <div class="space-y-3 text-sm">
+                <p>
+                  It looks like you have <strong>Brave Shield</strong> or similar browser protection enabled.
+                  This can interfere with the canvas rendering engine (Konva.js) used for drawing.
+                </p>
+                <p>
+                  <strong>To fix this issue:</strong>
+                </p>
+                <ol class="list-decimal list-inside space-y-1 ml-2">
+                  <li>Click the Brave/Shield icon in your browser's address bar</li>
+                  <li>Toggle "Shields" to OFF for this site</li>
+                  <li>Refresh the page</li>
+                </ol>
+                <p class="text-xs text-gray-500 mt-3">
+                  Alternatively, you can use a different browser (Chrome, Firefox, Safari, Edge) without this restriction.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button @click="showBraveWarning = false" class="!bg-gray-900 !text-white">
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDrawingStore } from '../stores/drawing'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 const store = useDrawingStore()
 const container = ref(null)
 const stage = ref(null)
 const backgroundImageObj = ref(null)
+const showBraveWarning = ref(false)
 
 const stageConfig = ref({
   width: 800,
@@ -1002,6 +1040,16 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
 })
+
+// Global error handler for Brave shield - set up immediately
+const originalError = console.error
+console.error = (...args) => {
+  const message = args.join(' ')
+  if (message.includes('Brave shield') || message.includes('Konva')) {
+    showBraveWarning.value = true
+  }
+  originalError.apply(console, args)
+}
 
 // Watch for tool changes and cancel polygon
 watch(() => store.currentTool, () => {

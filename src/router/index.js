@@ -12,6 +12,10 @@ const routes = [
     path: '/editor/:id?',
     name: 'editor',
     component: EditorView
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 
