@@ -78,7 +78,7 @@
       <v-layer ref="drawingLayer">
         <!-- Render lines -->
         <v-line
-          v-for="element in store.elements.filter(el => el.type === 'line')"
+          v-for="element in store.currentFloorElements.filter(el => el.type === 'line')"
           :key="element.id"
           :config="{
             points: element.points,
@@ -89,7 +89,7 @@
 
         <!-- Render doors -->
         <v-group
-          v-for="element in store.elements.filter(el => el.type === 'door')"
+          v-for="element in store.currentFloorElements.filter(el => el.type === 'door')"
           :key="element.id"
         >
           <v-arc
@@ -108,7 +108,7 @@
 
         <!-- Render windows -->
         <v-group
-          v-for="element in store.elements.filter(el => el.type === 'window')"
+          v-for="element in store.currentFloorElements.filter(el => el.type === 'window')"
           :key="element.id"
         >
           <v-rect
@@ -127,7 +127,7 @@
 
         <!-- Render polygons -->
         <v-group
-          v-for="element in store.elements.filter(el => el.type === 'polygon')"
+          v-for="element in store.currentFloorElements.filter(el => el.type === 'polygon')"
           :key="element.id"
         >
           <v-line
@@ -154,7 +154,7 @@
 
         <!-- Render room polygons -->
         <v-group
-          v-for="element in store.elements.filter(el => el.type === 'room-polygon')"
+          v-for="element in store.currentFloorElements.filter(el => el.type === 'room-polygon')"
           :key="element.id"
         >
           <v-line

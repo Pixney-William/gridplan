@@ -51,6 +51,38 @@
 
     <Separator orientation="vertical" class="h-6" />
 
+    <!-- Floor selector -->
+    <div class="flex items-center gap-2">
+      <Select :model-value="store.currentFloorId" @update:model-value="store.setCurrentFloor">
+        <SelectTrigger class="w-32 h-8">
+          <SelectValue>{{ store.currentFloor.name }}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem v-for="floor in store.floors" :key="floor.id" :value="floor.id">
+            {{ floor.name }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <Button
+        @click="store.addFloor()"
+        variant="secondary"
+        size="sm"
+        title="Add new floor"
+      >
+        +
+      </Button>
+      <Button
+        @click="store.duplicateFloor(store.currentFloorId)"
+        variant="secondary"
+        size="sm"
+        title="Duplicate current floor"
+      >
+        ⎘
+      </Button>
+    </div>
+
+    <Separator orientation="vertical" class="h-6" />
+
     <!-- Undo/Redo -->
     <div class="flex items-center gap-2">
       <Button
@@ -111,6 +143,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ButtonGroup } from '@/components/ui/button-group'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const router = useRouter()
 const store = useDrawingStore()

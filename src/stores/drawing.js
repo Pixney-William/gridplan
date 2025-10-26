@@ -14,13 +14,16 @@ export const useDrawingStore = defineStore('drawing', {
     // Drawing tool
     currentTool: 'select', // 'select', 'line', 'door', 'window', 'room-polygon', 'calibrate'
 
-    // Drawing elements
-    elements: [],
+    // Multi-floor structure
+    floors: [
+      { id: '1', name: 'Floor 1', elements: [] }
+    ],
+    currentFloorId: '1',
 
     // Selection
     selectedElementId: null,
 
-    // History for undo/redo
+    // History for undo/redo (per floor)
     history: [],
     historyIndex: -1,
 
@@ -37,7 +40,7 @@ export const useDrawingStore = defineStore('drawing', {
     currentDrawingId: null,
     currentDrawingName: '',
 
-    // Background reference image (not saved)
+    // Background reference image (shared across floors)
     backgroundImage: {
       dataUrl: null,
       x: 0,
@@ -50,37 +53,62 @@ export const useDrawingStore = defineStore('drawing', {
   }),
 
   getters: {
-    totalSqm: (state) => {
-      // Calculate total square meters from wall polygons only (outer perimeter)
-      // Room polygons are just labels/divisions
-      let total = 0
+    currentFloor: (state) => {
+      return state.floors.find(f => f.id === state.currentFloorId) || state.floors[0]
+    },
 
-      state.elements.forEach(element => {
-        // Only count wall polygons (line tool), not room polygons
+    currentFloorElements: (state) => {
+      const floor = state.floors.find(f => f.id === state.currentFloorId)
+      return floor ? floor.elements : []
+    },
+
+    currentFloorSqm: (state) => {
+      const floor = state.floors.find(f => f.id === state.currentFloorId)
+      if (!floor) return 0
+
+      let total = 0
+      floor.elements.forEach(element => {
         if (element.type === 'polygon' && element.area) {
           total += element.area
         }
       })
-
       return total
     },
 
-    totalPrice: (state) => {
-      const total = state.totalSqm
-      return total * state.pricePerSqm
+    totalBuildingSqm: (state) => {
+      let total = 0
+      state.floors.forEach(floor => {
+        floor.elements.forEach(element => {
+          if (element.type === 'polygon' && element.area) {
+            total += element.area
+          }
+        })
+      })
+      return total
     },
 
-    exceedsMaxSqm: (state) => {
-      return state.totalSqm > state.maxSqm
+    // Keep for backward compat
+    totalSqm(state) {
+      return this.totalBuildingSqm
+    },
+
+    totalPrice(state) {
+      return this.totalBuildingSqm * state.pricePerSqm
+    },
+
+    exceedsMaxSqm(state) {
+      return this.totalBuildingSqm > state.maxSqm
     },
 
     metersPerPixel: (state) => {
       return state.gridUnit / state.gridSize
     },
 
-    selectedElement: (state) => {
+    selectedElement(state) {
       if (!state.selectedElementId) return null
-      return state.elements.find(el => el.id === state.selectedElementId) || null
+      const floor = state.floors.find(f => f.id === state.currentFloorId)
+      if (!floor) return null
+      return floor.elements.find(el => el.id === state.selectedElementId) || null
     },
   },
 
@@ -99,6 +127,67 @@ export const useDrawingStore = defineStore('drawing', {
 
     clearSelection() {
       this.selectedElementId = null
+    },
+
+    // Floor management
+    addFloor() {
+      const newId = String(Date.now())
+      const newFloor = {
+        id: newId,
+        name: `Floor ${this.floors.length + 1}`,
+        elements: []
+      }
+      this.floors.push(newFloor)
+      this.currentFloorId = newId
+      this.history = []
+      this.historyIndex = -1
+    },
+
+    duplicateFloor(floorId) {
+      const sourceFloor = this.floors.find(f => f.id === floorId)
+      if (!sourceFloor) return
+
+      const newId = String(Date.now())
+      const newFloor = {
+        id: newId,
+        name: `${sourceFloor.name} (Copy)`,
+        elements: JSON.parse(JSON.stringify(sourceFloor.elements)).map(el => ({
+          ...el,
+          id: String(Date.now()) + Math.random()
+        }))
+      }
+      this.floors.push(newFloor)
+      this.currentFloorId = newId
+      this.history = [JSON.parse(JSON.stringify(newFloor.elements))]
+      this.historyIndex = 0
+    },
+
+    deleteFloor(floorId) {
+      if (this.floors.length === 1) return // Can't delete last floor
+
+      const index = this.floors.findIndex(f => f.id === floorId)
+      if (index === -1) return
+
+      this.floors.splice(index, 1)
+
+      // Switch to first floor if current was deleted
+      if (floorId === this.currentFloorId) {
+        this.currentFloorId = this.floors[0].id
+        const floor = this.floors[0]
+        this.history = [JSON.parse(JSON.stringify(floor.elements))]
+        this.historyIndex = 0
+      }
+    },
+
+    setCurrentFloor(floorId) {
+      const floor = this.floors.find(f => f.id === floorId)
+      if (!floor) return
+
+      this.currentFloorId = floorId
+      this.selectedElementId = null
+      // Reset history to current floor's elements
+      this.history = [JSON.parse(JSON.stringify(floor.elements))]
+      this.historyIndex = 0
     },
 
     calculatePolygonArea(points) {
@@ -123,29 +212,41 @@ export const useDrawingStore = defineStore('drawing', {
     },
 
     addElement(element) {
-      this.elements.push(element)
+      const floor = this.floors.find(f => f.id === this.currentFloorId)
+      if (!floor) return
+
+      floor.elements.push(element)
       this.saveToHistory()
     },
 
     removeElement(id) {
-      this.elements = this.elements.filter(el => el.id !== id)
+      const floor = this.floors.find(f => f.id === this.currentFloorId)
+      if (!floor) return
+
+      floor.elements = floor.elements.filter(el => el.id !== id)
       this.saveToHistory()
     },
 
     updateElement(id, updates) {
-      const index = this.elements.findIndex(el => el.id === id)
+      const floor = this.floors.find(f => f.id === this.currentFloorId)
+      if (!floor) return
+
+      const index = floor.elements.findIndex(el => el.id === id)
       if (index !== -1) {
-        this.elements[index] = { ...this.elements[index], ...updates }
+        floor.elements[index] = { ...floor.elements[index], ...updates }
         this.saveToHistory()
       }
     },
 
     saveToHistory() {
+      const floor = this.floors.find(f => f.id === this.currentFloorId)
+      if (!floor) return
+
       // Remove any future history if we're not at the end
       this.history = this.history.slice(0, this.historyIndex + 1)
 
       // Add current state to history
-      this.history.push(JSON.parse(JSON.stringify(this.elements)))
+      this.history.push(JSON.parse(JSON.stringify(floor.elements)))
       this.historyIndex++
 
       // Limit history to 50 states
@@ -158,14 +259,20 @@ export const useDrawingStore = defineStore('drawing', {
     undo() {
       if (this.historyIndex > 0) {
         this.historyIndex--
-        this.elements = JSON.parse(JSON.stringify(this.history[this.historyIndex]))
+        const floor = this.floors.find(f => f.id === this.currentFloorId)
+        if (floor) {
+          floor.elements = JSON.parse(JSON.stringify(this.history[this.historyIndex]))
+        }
       }
     },
 
     redo() {
       if (this.historyIndex < this.history.length - 1) {
         this.historyIndex++
-        this.elements = JSON.parse(JSON.stringify(this.history[this.historyIndex]))
+        const floor = this.floors.find(f => f.id === this.currentFloorId)
+        if (floor) {
+          floor.elements = JSON.parse(JSON.stringify(this.history[this.historyIndex]))
+        }
       }
     },
 
@@ -197,21 +304,23 @@ export const useDrawingStore = defineStore('drawing', {
     },
 
     recalculateAllAreas() {
-      // Recalculate area for all elements when scale changes (reactive)
-      this.elements = this.elements.map(element => {
-        if (element.type === 'polygon' || element.type === 'room-polygon') {
-          // Recalculate polygon area
-          return {
-            ...element,
-            area: this.calculatePolygonArea(element.points)
+      // Recalculate area for all elements on all floors when scale changes
+      this.floors.forEach(floor => {
+        floor.elements = floor.elements.map(element => {
+          if (element.type === 'polygon' || element.type === 'room-polygon') {
+            return {
+              ...element,
+              area: this.calculatePolygonArea(element.points)
+            }
           }
-        }
-        return element
+          return element
+        })
       })
     },
 
     clearDrawing() {
-      this.elements = []
+      this.floors = [{ id: '1', name: 'Floor 1', elements: [] }]
+      this.currentFloorId = '1'
       this.history = []
       this.historyIndex = -1
       this.currentDrawingId = null
@@ -245,7 +354,19 @@ export const useDrawingStore = defineStore('drawing', {
     },
 
     loadDrawing(drawing) {
-      this.elements = drawing.elements || []
+      // Migrate old format (elements array) to new format (floors array)
+      if (drawing.elements && !drawing.floors) {
+        this.floors = [{
+          id: '1',
+          name: 'Floor 1',
+          elements: drawing.elements || []
+        }]
+        this.currentFloorId = '1'
+      } else {
+        this.floors = drawing.floors || [{ id: '1', name: 'Floor 1', elements: [] }]
+        this.currentFloorId = drawing.currentFloorId || this.floors[0].id
+      }
+
       this.gridSize = drawing.settings?.gridSize || 20
       this.gridUnit = drawing.settings?.gridUnit || 1
       this.scale = drawing.settings?.scale || '1:100'
@@ -256,8 +377,9 @@ export const useDrawingStore = defineStore('drawing', {
       this.currentDrawingId = drawing.id
       this.currentDrawingName = drawing.name
 
-      // Reset history
-      this.history = [JSON.parse(JSON.stringify(this.elements))]
+      // Reset history to current floor
+      const currentFloor = this.floors.find(f => f.id === this.currentFloorId)
+      this.history = [JSON.parse(JSON.stringify(currentFloor?.elements || []))]
       this.historyIndex = 0
     },
 
@@ -273,8 +395,9 @@ export const useDrawingStore = defineStore('drawing', {
           wallThickness: this.wallThickness,
           innerWallThickness: this.innerWallThickness,
         },
-        elements: this.elements,
-        total_sqm: this.totalSqm,
+        floors: this.floors,
+        currentFloorId: this.currentFloorId,
+        total_sqm: this.totalBuildingSqm,
       }
     },
   },
