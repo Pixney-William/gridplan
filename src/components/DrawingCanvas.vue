@@ -97,6 +97,56 @@
           />
         </v-group>
 
+        <!-- Render polygons -->
+        <v-group
+          v-for="element in store.elements.filter(el => el.type === 'polygon')"
+          :key="element.id"
+        >
+          <v-line
+            :config="{
+              points: element.points,
+              stroke: '#9333ea',
+              strokeWidth: 2,
+              fill: '#f3e8ff',
+              opacity: 0.4,
+              closed: true,
+            }"
+          />
+          <v-text
+            :config="{
+              x: element.points[0] + 5,
+              y: element.points[1] + 5,
+              text: `${element.area.toFixed(1)}m²`,
+              fontSize: 14,
+              fill: '#581c87',
+              fontStyle: 'bold',
+            }"
+          />
+        </v-group>
+
+        <!-- Current polygon preview -->
+        <v-line
+          v-if="isDrawingPolygon && currentPolygonPoints.length >= 2"
+          :config="{
+            points: currentPolygonPoints,
+            stroke: '#9333ea',
+            strokeWidth: 2,
+            dash: [5, 5],
+          }"
+        />
+
+        <!-- Start point indicator for closing polygon -->
+        <v-circle
+          v-if="isDrawingPolygon && currentPolygonPoints.length >= 2"
+          :config="{
+            x: currentPolygonPoints[0],
+            y: currentPolygonPoints[1],
+            radius: 8,
+            fill: '#9333ea',
+            opacity: 0.6,
+          }"
+        />
+
         <!-- Current drawing preview -->
         <v-line
           v-if="isDrawing && currentPoints.length > 0 && store.currentTool === 'line'"
@@ -146,6 +196,8 @@ const isDrawing = ref(false)
 const currentPoints = ref([])
 const isPanning = ref(false)
 const lastPanPoint = ref({ x: 0, y: 0 })
+const currentPolygonPoints = ref([])
+const isDrawingPolygon = ref(false)
 
 // Grid lines
 const gridLines = computed(() => {
@@ -181,6 +233,14 @@ const snapToGrid = (value) => {
   return Math.round(value / gridSize) * gridSize
 }
 
+// Check if point is near another point (for closing polygons)
+const isNearPoint = (x1, y1, x2, y2, threshold = null) => {
+  const snapDistance = threshold || store.gridSize
+  const dx = x2 - x1
+  const dy = y2 - y1
+  return Math.sqrt(dx * dx + dy * dy) <= snapDistance
+}
+
 // Get mouse position relative to stage
 const getRelativePointerPosition = () => {
   const stageNode = stage.value?.getNode()
@@ -208,8 +268,33 @@ const handleMouseDown = (e) => {
     const snappedY = snapToGrid(pos.y)
 
     if (store.currentTool === 'line') {
-      isDrawing.value = true
-      currentPoints.value = [snappedX, snappedY, snappedX, snappedY]
+      // Multi-segment polygon drawing
+      if (!isDrawingPolygon.value) {
+        // Start new polygon
+        isDrawingPolygon.value = true
+        currentPolygonPoints.value = [snappedX, snappedY]
+      } else {
+        // Check if clicking near start point to close polygon
+        const startX = currentPolygonPoints.value[0]
+        const startY = currentPolygonPoints.value[1]
+
+        if (currentPolygonPoints.value.length >= 6 && isNearPoint(snappedX, snappedY, startX, startY)) {
+          // Close polygon and calculate area
+          const area = store.calculatePolygonArea(currentPolygonPoints.value)
+          store.addElement({
+            id: Date.now().toString(),
+            type: 'polygon',
+            points: [...currentPolygonPoints.value],
+            area: area,
+          })
+          // Reset polygon drawing
+          isDrawingPolygon.value = false
+          currentPolygonPoints.value = []
+        } else {
+          // Add new point to polygon
+          currentPolygonPoints.value.push(snappedX, snappedY)
+        }
+      }
     } else if (store.currentTool === 'door') {
       // Place door
       store.addElement({
@@ -251,6 +336,21 @@ const handleMouseMove = (e) => {
     }
 
     lastPanPoint.value = { x: e.evt.clientX, y: e.evt.clientY }
+    return
+  }
+
+  // Update preview line for polygon drawing
+  if (isDrawingPolygon.value && store.currentTool === 'line') {
+    const pos = getRelativePointerPosition()
+    const snappedX = snapToGrid(pos.x)
+    const snappedY = snapToGrid(pos.y)
+
+    // Create preview line from last point to current position
+    if (currentPolygonPoints.value.length >= 2) {
+      const lastX = currentPolygonPoints.value[currentPolygonPoints.value.length - 2]
+      const lastY = currentPolygonPoints.value[currentPolygonPoints.value.length - 1]
+      currentPoints.value = [lastX, lastY, snappedX, snappedY]
+    }
     return
   }
 
@@ -346,6 +446,22 @@ const handleWheel = (e) => {
   stageNode.position(newPos)
 }
 
+// Cancel polygon drawing
+const cancelPolygon = () => {
+  if (isDrawingPolygon.value) {
+    isDrawingPolygon.value = false
+    currentPolygonPoints.value = []
+    currentPoints.value = []
+  }
+}
+
+// Keyboard handler
+const handleKeyDown = (e) => {
+  if (e.key === 'Escape') {
+    cancelPolygon()
+  }
+}
+
 // Resize observer
 onMounted(() => {
   if (container.value) {
@@ -359,5 +475,13 @@ onMounted(() => {
   // Initial size
   stageConfig.value.width = container.value.offsetWidth
   stageConfig.value.height = container.value.offsetHeight
+
+  // Add keyboard listener
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+// Watch for tool changes and cancel polygon
+watch(() => store.currentTool, () => {
+  cancelPolygon()
 })
 </script>

@@ -41,7 +41,8 @@ export const useDrawingStore = defineStore('drawing', {
       state.elements.forEach(element => {
         if (element.type === 'line') {
           // Lines don't contribute to area directly
-          // We'll calculate room areas from enclosed spaces later
+        } else if (element.type === 'polygon' && element.area) {
+          total += element.area
         } else if (element.area) {
           total += element.area
         }
@@ -67,6 +68,27 @@ export const useDrawingStore = defineStore('drawing', {
   actions: {
     setTool(tool) {
       this.currentTool = tool
+    },
+
+    calculatePolygonArea(points) {
+      // Shoelace formula for polygon area
+      // points is [x1, y1, x2, y2, ..., xn, yn]
+      if (points.length < 6) return 0 // Need at least 3 points
+
+      let area = 0
+      const n = points.length / 2
+
+      for (let i = 0; i < n; i++) {
+        const x1 = points[i * 2]
+        const y1 = points[i * 2 + 1]
+        const x2 = points[((i + 1) % n) * 2]
+        const y2 = points[((i + 1) % n) * 2 + 1]
+        area += x1 * y2 - x2 * y1
+      }
+
+      const areaInPixels = Math.abs(area) / 2
+      const areaInMeters = areaInPixels * (this.metersPerPixel ** 2)
+      return areaInMeters
     },
 
     addElement(element) {
