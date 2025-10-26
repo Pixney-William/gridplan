@@ -49,15 +49,13 @@ export const useDrawingStore = defineStore('drawing', {
 
   getters: {
     totalSqm: (state) => {
-      // Calculate total square meters from all elements
+      // Calculate total square meters from wall polygons only (outer perimeter)
+      // Room polygons and rectangle rooms are just labels/divisions
       let total = 0
 
       state.elements.forEach(element => {
-        if (element.type === 'line') {
-          // Lines don't contribute to area directly
-        } else if ((element.type === 'polygon' || element.type === 'room-polygon') && element.area) {
-          total += element.area
-        } else if (element.area) {
+        // Only count wall polygons (line tool), not room polygons or rectangle rooms
+        if (element.type === 'polygon' && element.area) {
           total += element.area
         }
       })
