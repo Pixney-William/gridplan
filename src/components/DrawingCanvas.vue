@@ -25,8 +25,8 @@
           :key="element.id"
           :config="{
             points: element.points,
-            stroke: '#000',
-            strokeWidth: 2,
+            stroke: store.selectedElementId === element.id ? '#1f2937' : '#000',
+            strokeWidth: store.selectedElementId === element.id ? 4 : 2,
           }"
         />
 
@@ -43,8 +43,8 @@
               outerRadius: element.radius || 30,
               angle: 90,
               rotation: element.rotation || 0,
-              stroke: '#4f46e5',
-              strokeWidth: 2,
+              stroke: store.selectedElementId === element.id ? '#3730a3' : '#4f46e5',
+              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
             }"
           />
         </v-group>
@@ -61,8 +61,8 @@
               width: element.width || 40,
               height: element.height || 10,
               rotation: element.rotation || 0,
-              stroke: '#0891b2',
-              strokeWidth: 2,
+              stroke: store.selectedElementId === element.id ? '#0e7490' : '#0891b2',
+              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
               fill: '#cffafe',
             }"
           />
@@ -79,8 +79,8 @@
               y: element.y,
               width: element.width,
               height: element.height,
-              stroke: '#16a34a',
-              strokeWidth: 2,
+              stroke: store.selectedElementId === element.id ? '#059669' : '#16a34a',
+              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
               fill: '#dcfce7',
               opacity: 0.3,
             }"
@@ -105,8 +105,8 @@
           <v-line
             :config="{
               points: element.points,
-              stroke: '#9333ea',
-              strokeWidth: 2,
+              stroke: store.selectedElementId === element.id ? '#7e22ce' : '#9333ea',
+              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
               fill: '#f3e8ff',
               opacity: 0.4,
               closed: true,
@@ -119,6 +119,33 @@
               text: `${element.area.toFixed(1)}m²`,
               fontSize: 14,
               fill: '#581c87',
+              fontStyle: 'bold',
+            }"
+          />
+        </v-group>
+
+        <!-- Render room polygons -->
+        <v-group
+          v-for="element in store.elements.filter(el => el.type === 'room-polygon')"
+          :key="element.id"
+        >
+          <v-line
+            :config="{
+              points: element.points,
+              stroke: store.selectedElementId === element.id ? '#059669' : '#16a34a',
+              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
+              fill: '#dcfce7',
+              opacity: 0.3,
+              closed: true,
+            }"
+          />
+          <v-text
+            :config="{
+              x: element.points[0] + 5,
+              y: element.points[1] + 5,
+              text: `${element.area.toFixed(1)}m²`,
+              fontSize: 14,
+              fill: '#166534',
               fontStyle: 'bold',
             }"
           />
@@ -143,6 +170,29 @@
             y: currentPolygonPoints[1],
             radius: 8,
             fill: '#9333ea',
+            opacity: 0.6,
+          }"
+        />
+
+        <!-- Current room polygon preview -->
+        <v-line
+          v-if="isDrawingRoomPolygon && currentRoomPolygonPoints.length >= 2"
+          :config="{
+            points: currentRoomPolygonPoints,
+            stroke: '#16a34a',
+            strokeWidth: 2,
+            dash: [5, 5],
+          }"
+        />
+
+        <!-- Start point indicator for closing room polygon -->
+        <v-circle
+          v-if="isDrawingRoomPolygon && currentRoomPolygonPoints.length >= 2"
+          :config="{
+            x: currentRoomPolygonPoints[0],
+            y: currentRoomPolygonPoints[1],
+            radius: 8,
+            fill: '#16a34a',
             opacity: 0.6,
           }"
         />
@@ -198,6 +248,11 @@ const isPanning = ref(false)
 const lastPanPoint = ref({ x: 0, y: 0 })
 const currentPolygonPoints = ref([])
 const isDrawingPolygon = ref(false)
+const currentRoomPolygonPoints = ref([])
+const isDrawingRoomPolygon = ref(false)
+const isDragging = ref(false)
+const dragStartPos = ref({ x: 0, y: 0 })
+const dragElementStart = ref(null)
 
 // Grid lines
 const gridLines = computed(() => {
@@ -241,6 +296,103 @@ const isNearPoint = (x1, y1, x2, y2, threshold = null) => {
   return Math.sqrt(dx * dx + dy * dy) <= snapDistance
 }
 
+// Hit detection - check if point is inside/near an element
+const isPointInElement = (x, y, element) => {
+  const threshold = 10 // pixels
+
+  if (element.type === 'room') {
+    // Rectangle bounds check
+    return x >= element.x && x <= element.x + element.width &&
+           y >= element.y && y <= element.y + element.height
+  }
+
+  if (element.type === 'polygon' || element.type === 'room-polygon') {
+    // Point in polygon algorithm (ray casting)
+    const points = element.points
+    let inside = false
+    const n = points.length / 2
+
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = points[i * 2]
+      const yi = points[i * 2 + 1]
+      const xj = points[j * 2]
+      const yj = points[j * 2 + 1]
+
+      const intersect = ((yi > y) !== (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+      if (intersect) inside = !inside
+    }
+
+    return inside
+  }
+
+  if (element.type === 'line') {
+    // Distance to line segment
+    const x1 = element.points[0]
+    const y1 = element.points[1]
+    const x2 = element.points[2]
+    const y2 = element.points[3]
+
+    const A = x - x1
+    const B = y - y1
+    const C = x2 - x1
+    const D = y2 - y1
+
+    const dot = A * C + B * D
+    const lenSq = C * C + D * D
+    let param = -1
+
+    if (lenSq !== 0) param = dot / lenSq
+
+    let xx, yy
+
+    if (param < 0) {
+      xx = x1
+      yy = y1
+    } else if (param > 1) {
+      xx = x2
+      yy = y2
+    } else {
+      xx = x1 + param * C
+      yy = y1 + param * D
+    }
+
+    const dx = x - xx
+    const dy = y - yy
+    return Math.sqrt(dx * dx + dy * dy) <= threshold
+  }
+
+  if (element.type === 'door' || element.type === 'window') {
+    // Simple radius check
+    const dx = x - element.x
+    const dy = y - element.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (element.type === 'door') {
+      return dist <= (element.radius || 30) + threshold
+    } else {
+      // Window rectangle check
+      const hw = (element.width || 40) / 2
+      const hh = (element.height || 10) / 2
+      return Math.abs(dx) <= hw + threshold && Math.abs(dy) <= hh + threshold
+    }
+  }
+
+  return false
+}
+
+// Get element at position (returns topmost element)
+const getElementAtPosition = (x, y) => {
+  // Check in reverse order (topmost first)
+  for (let i = store.elements.length - 1; i >= 0; i--) {
+    const element = store.elements[i]
+    if (isPointInElement(x, y, element)) {
+      return element
+    }
+  }
+  return null
+}
+
 // Get mouse position relative to stage
 const getRelativePointerPosition = () => {
   const stageNode = stage.value?.getNode()
@@ -262,10 +414,25 @@ const handleMouseDown = (e) => {
     return
   }
 
-  // Left click for drawing
+  // Left click for drawing or selecting
   if (e.evt.button === 0) {
     const snappedX = snapToGrid(pos.x)
     const snappedY = snapToGrid(pos.y)
+
+    // Select tool - handle element selection and dragging
+    if (store.currentTool === 'select') {
+      const element = getElementAtPosition(pos.x, pos.y)
+      if (element) {
+        store.selectElement(element.id)
+        isDragging.value = true
+        dragStartPos.value = { x: pos.x, y: pos.y }
+        // Store copy of element start state for dragging
+        dragElementStart.value = JSON.parse(JSON.stringify(element))
+      } else {
+        store.clearSelection()
+      }
+      return
+    }
 
     if (store.currentTool === 'line') {
       // Multi-segment polygon drawing
@@ -316,6 +483,34 @@ const handleMouseDown = (e) => {
         height: 10,
         rotation: 0,
       })
+    } else if (store.currentTool === 'room-polygon') {
+      // Multi-segment room polygon drawing
+      if (!isDrawingRoomPolygon.value) {
+        // Start new room polygon
+        isDrawingRoomPolygon.value = true
+        currentRoomPolygonPoints.value = [snappedX, snappedY]
+      } else {
+        // Check if clicking near start point to close polygon
+        const startX = currentRoomPolygonPoints.value[0]
+        const startY = currentRoomPolygonPoints.value[1]
+
+        if (currentRoomPolygonPoints.value.length >= 6 && isNearPoint(snappedX, snappedY, startX, startY)) {
+          // Close polygon and calculate area
+          const area = store.calculatePolygonArea(currentRoomPolygonPoints.value)
+          store.addElement({
+            id: Date.now().toString(),
+            type: 'room-polygon',
+            points: [...currentRoomPolygonPoints.value],
+            area: area,
+          })
+          // Reset polygon drawing
+          isDrawingRoomPolygon.value = false
+          currentRoomPolygonPoints.value = []
+        } else {
+          // Add new point to polygon
+          currentRoomPolygonPoints.value.push(snappedX, snappedY)
+        }
+      }
     } else if (store.currentTool === 'room') {
       // Start drawing room
       isDrawing.value = true
@@ -339,6 +534,43 @@ const handleMouseMove = (e) => {
     return
   }
 
+  // Handle dragging of selected element
+  if (isDragging.value && store.selectedElementId && dragElementStart.value) {
+    const pos = getRelativePointerPosition()
+    const dx = pos.x - dragStartPos.value.x
+    const dy = pos.y - dragStartPos.value.y
+
+    const element = dragElementStart.value
+    const updates = {}
+
+    if (element.type === 'room') {
+      updates.x = element.x + dx
+      updates.y = element.y + dy
+    } else if (element.type === 'polygon' || element.type === 'room-polygon') {
+      // Shift all points
+      const newPoints = []
+      for (let i = 0; i < element.points.length; i += 2) {
+        newPoints.push(element.points[i] + dx)
+        newPoints.push(element.points[i + 1] + dy)
+      }
+      updates.points = newPoints
+    } else if (element.type === 'line') {
+      // Shift all points
+      const newPoints = []
+      for (let i = 0; i < element.points.length; i += 2) {
+        newPoints.push(element.points[i] + dx)
+        newPoints.push(element.points[i + 1] + dy)
+      }
+      updates.points = newPoints
+    } else if (element.type === 'door' || element.type === 'window') {
+      updates.x = element.x + dx
+      updates.y = element.y + dy
+    }
+
+    store.updateElement(store.selectedElementId, updates)
+    return
+  }
+
   // Update preview line for polygon drawing
   if (isDrawingPolygon.value && store.currentTool === 'line') {
     const pos = getRelativePointerPosition()
@@ -349,6 +581,21 @@ const handleMouseMove = (e) => {
     if (currentPolygonPoints.value.length >= 2) {
       const lastX = currentPolygonPoints.value[currentPolygonPoints.value.length - 2]
       const lastY = currentPolygonPoints.value[currentPolygonPoints.value.length - 1]
+      currentPoints.value = [lastX, lastY, snappedX, snappedY]
+    }
+    return
+  }
+
+  // Update preview line for room polygon drawing
+  if (isDrawingRoomPolygon.value && store.currentTool === 'room-polygon') {
+    const pos = getRelativePointerPosition()
+    const snappedX = snapToGrid(pos.x)
+    const snappedY = snapToGrid(pos.y)
+
+    // Create preview line from last point to current position
+    if (currentRoomPolygonPoints.value.length >= 2) {
+      const lastX = currentRoomPolygonPoints.value[currentRoomPolygonPoints.value.length - 2]
+      const lastY = currentRoomPolygonPoints.value[currentRoomPolygonPoints.value.length - 1]
       currentPoints.value = [lastX, lastY, snappedX, snappedY]
     }
     return
@@ -370,6 +617,13 @@ const handleMouseMove = (e) => {
 const handleMouseUp = () => {
   if (isPanning.value) {
     isPanning.value = false
+    return
+  }
+
+  // Stop dragging
+  if (isDragging.value) {
+    isDragging.value = false
+    dragElementStart.value = null
     return
   }
 
@@ -451,6 +705,11 @@ const cancelPolygon = () => {
   if (isDrawingPolygon.value) {
     isDrawingPolygon.value = false
     currentPolygonPoints.value = []
+    currentPoints.value = []
+  }
+  if (isDrawingRoomPolygon.value) {
+    isDrawingRoomPolygon.value = false
+    currentRoomPolygonPoints.value = []
     currentPoints.value = []
   }
 }

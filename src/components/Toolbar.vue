@@ -9,6 +9,17 @@
     <!-- Drawing tools -->
     <div class="flex items-center gap-2">
       <button
+        @click="store.setTool('select')"
+        :class="[
+          'px-4 py-2 rounded text-sm font-medium transition-colors',
+          store.currentTool === 'select'
+            ? 'bg-gray-800 text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        ]"
+      >
+        Select
+      </button>
+      <button
         @click="store.setTool('line')"
         :class="[
           'px-4 py-2 rounded text-sm font-medium transition-colors',
@@ -51,6 +62,17 @@
         ]"
       >
         Room
+      </button>
+      <button
+        @click="store.setTool('room-polygon')"
+        :class="[
+          'px-4 py-2 rounded text-sm font-medium transition-colors',
+          store.currentTool === 'room-polygon'
+            ? 'bg-green-600 text-white'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        ]"
+      >
+        Room Polygon
       </button>
     </div>
 

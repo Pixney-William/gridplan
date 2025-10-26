@@ -10,10 +10,13 @@ export const useDrawingStore = defineStore('drawing', {
     pricePerSqm: 25000,  // SEK per square meter
 
     // Drawing tool
-    currentTool: 'line', // 'line', 'door', 'window', 'room'
+    currentTool: 'select', // 'select', 'line', 'door', 'window', 'room', 'room-polygon'
 
     // Drawing elements
     elements: [],
+
+    // Selection
+    selectedElementId: null,
 
     // History for undo/redo
     history: [],
@@ -41,7 +44,7 @@ export const useDrawingStore = defineStore('drawing', {
       state.elements.forEach(element => {
         if (element.type === 'line') {
           // Lines don't contribute to area directly
-        } else if (element.type === 'polygon' && element.area) {
+        } else if ((element.type === 'polygon' || element.type === 'room-polygon') && element.area) {
           total += element.area
         } else if (element.area) {
           total += element.area
@@ -63,11 +66,28 @@ export const useDrawingStore = defineStore('drawing', {
     metersPerPixel: (state) => {
       return state.gridUnit / state.gridSize
     },
+
+    selectedElement: (state) => {
+      if (!state.selectedElementId) return null
+      return state.elements.find(el => el.id === state.selectedElementId) || null
+    },
   },
 
   actions: {
     setTool(tool) {
       this.currentTool = tool
+      // Clear selection when changing tools
+      if (tool !== 'select') {
+        this.selectedElementId = null
+      }
+    },
+
+    selectElement(id) {
+      this.selectedElementId = id
+    },
+
+    clearSelection() {
+      this.selectedElementId = null
     },
 
     calculatePolygonArea(points) {
