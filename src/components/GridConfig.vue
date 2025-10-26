@@ -64,7 +64,22 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import { useDrawingStore } from '../stores/drawing'
 
 const store = useDrawingStore()
+
+// Watch for gridUnit changes and trigger recalculation
+watch(() => store.gridUnit, (newVal, oldVal) => {
+  if (newVal !== oldVal && oldVal !== undefined) {
+    store.recalculateAllAreas()
+  }
+})
+
+// Watch for gridSize changes (affects metersPerPixel calculation)
+watch(() => store.gridSize, (newVal, oldVal) => {
+  if (newVal !== oldVal && oldVal !== undefined) {
+    store.recalculateAllAreas()
+  }
+})
 </script>
