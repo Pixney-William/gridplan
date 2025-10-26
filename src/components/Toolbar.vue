@@ -53,17 +53,6 @@
         Window
       </button>
       <button
-        @click="store.setTool('room')"
-        :class="[
-          'px-4 py-2 rounded text-sm font-medium transition-colors',
-          store.currentTool === 'room'
-            ? 'bg-green-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
-      >
-        Room
-      </button>
-      <button
         @click="store.setTool('room-polygon')"
         :class="[
           'px-4 py-2 rounded text-sm font-medium transition-colors',

@@ -1,5 +1,5 @@
 <template>
-  <div ref="container" class="w-full h-full bg-white relative">
+  <div ref="container" class="w-full h-full bg-white relative" :style="{ cursor: cursorStyle }">
     <!-- Delete button (only when element selected) -->
     <div v-if="store.selectedElementId" class="absolute top-5 right-5 z-20">
       <button
@@ -46,6 +46,7 @@
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
+      @wheel="handleWheel"
     >
       <!-- Background image layer -->
       <v-layer ref="backgroundLayer">
@@ -124,35 +125,6 @@
           />
         </v-group>
 
-        <!-- Render rooms -->
-        <v-group
-          v-for="element in store.elements.filter(el => el.type === 'room')"
-          :key="element.id"
-        >
-          <v-rect
-            :config="{
-              x: element.x,
-              y: element.y,
-              width: element.width,
-              height: element.height,
-              stroke: store.selectedElementId === element.id ? '#059669' : '#16a34a',
-              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
-              fill: '#dcfce7',
-              opacity: 0.3,
-            }"
-          />
-          <v-text
-            :config="{
-              x: element.x + 5,
-              y: element.y + 5,
-              text: `${element.area.toFixed(1)}m²`,
-              fontSize: 14,
-              fill: '#166534',
-              fontStyle: 'bold',
-            }"
-          />
-        </v-group>
-
         <!-- Render polygons -->
         <v-group
           v-for="element in store.elements.filter(el => el.type === 'polygon')"
@@ -162,7 +134,7 @@
             :config="{
               points: element.points,
               stroke: store.selectedElementId === element.id ? '#7e22ce' : '#9333ea',
-              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
+              strokeWidth: store.selectedElementId === element.id ? store.wallThickness + 2 : store.wallThickness,
               fill: '#f3e8ff',
               opacity: 0.4,
               closed: true,
@@ -213,7 +185,7 @@
           :config="{
             points: currentPolygonPoints,
             stroke: '#9333ea',
-            strokeWidth: 2,
+            strokeWidth: store.wallThickness,
             dash: [5, 5],
           }"
         />
@@ -280,20 +252,6 @@
             dash: [5, 5],
           }"
         />
-        <v-rect
-          v-if="isDrawing && currentPoints.length > 0 && store.currentTool === 'room'"
-          :config="{
-            x: Math.min(currentPoints[0], currentPoints[2]),
-            y: Math.min(currentPoints[1], currentPoints[3]),
-            width: Math.abs(currentPoints[2] - currentPoints[0]),
-            height: Math.abs(currentPoints[3] - currentPoints[1]),
-            stroke: '#16a34a',
-            strokeWidth: 2,
-            fill: '#dcfce7',
-            opacity: 0.3,
-            dash: [5, 5],
-          }"
-        />
 
         <!-- Calibration line preview -->
         <v-line
@@ -343,6 +301,15 @@ const selectedVertexIndex = ref(-1)
 const vertexDragStart = ref({ x: 0, y: 0 })
 const isDrawingCalibration = ref(false)
 const calibrationPoints = ref([])
+const spacebarPressed = ref(false)
+
+// Cursor style based on current state
+const cursorStyle = computed(() => {
+  if (isPanning.value) return 'grabbing'
+  if (spacebarPressed.value) return 'grab'
+  if (store.currentTool === 'select') return 'default'
+  return 'crosshair'
+})
 
 // Grid lines
 const gridLines = computed(() => {
@@ -389,12 +356,6 @@ const isNearPoint = (x1, y1, x2, y2, threshold = null) => {
 // Hit detection - check if point is inside/near an element
 const isPointInElement = (x, y, element) => {
   const threshold = 10 // pixels
-
-  if (element.type === 'room') {
-    // Rectangle bounds check
-    return x >= element.x && x <= element.x + element.width &&
-           y >= element.y && y <= element.y + element.height
-  }
 
   if (element.type === 'polygon' || element.type === 'room-polygon') {
     // Point in polygon algorithm (ray casting)
@@ -522,8 +483,8 @@ const getRelativePointerPosition = () => {
 const handleMouseDown = (e) => {
   const pos = getRelativePointerPosition()
 
-  // Middle mouse button for panning
-  if (e.evt.button === 1 || e.evt.ctrlKey) {
+  // Middle mouse button, Ctrl+drag, or Spacebar+drag for panning
+  if (e.evt.button === 1 || e.evt.ctrlKey || spacebarPressed.value) {
     isPanning.value = true
     lastPanPoint.value = { x: e.evt.clientX, y: e.evt.clientY }
     return
@@ -644,10 +605,6 @@ const handleMouseDown = (e) => {
           currentRoomPolygonPoints.value.push(snappedX, snappedY)
         }
       }
-    } else if (store.currentTool === 'room') {
-      // Start drawing room
-      isDrawing.value = true
-      currentPoints.value = [snappedX, snappedY, snappedX, snappedY]
     } else if (store.currentTool === 'calibrate') {
       // Calibration line drawing
       if (!isDrawingCalibration.value) {
@@ -713,10 +670,7 @@ const handleMouseMove = (e) => {
     const element = dragElementStart.value
     const updates = {}
 
-    if (element.type === 'room') {
-      updates.x = element.x + dx
-      updates.y = element.y + dy
-    } else if (element.type === 'polygon' || element.type === 'room-polygon') {
+    if (element.type === 'polygon' || element.type === 'room-polygon') {
       // Shift all points
       const newPoints = []
       for (let i = 0; i < element.points.length; i += 2) {
@@ -783,7 +737,7 @@ const handleMouseMove = (e) => {
     return
   }
 
-  if (isDrawing.value && (store.currentTool === 'line' || store.currentTool === 'room')) {
+  if (isDrawing.value && store.currentTool === 'line') {
     const pos = getRelativePointerPosition()
     const snappedX = snapToGrid(pos.x)
     const snappedY = snapToGrid(pos.y)
@@ -794,6 +748,43 @@ const handleMouseMove = (e) => {
       snappedY,
     ]
   }
+}
+
+const handleWheel = (e) => {
+  // Only zoom when spacebar is pressed
+  if (!spacebarPressed.value) return
+
+  e.evt.preventDefault()
+
+  const stageNode = stage.value?.getNode()
+  if (!stageNode) return
+
+  const oldScale = stageNode.scaleX()
+  const pointer = stageNode.getPointerPosition()
+
+  // Zoom direction based on deltaY
+  const scaleBy = e.evt.deltaY > 0 ? 0.9 : 1.1
+  const newScale = oldScale * scaleBy
+
+  // Limit zoom
+  const clampedScale = Math.max(0.1, Math.min(5, newScale))
+
+  // Zoom toward mouse pointer
+  const mousePointTo = {
+    x: (pointer.x - stageNode.x()) / oldScale,
+    y: (pointer.y - stageNode.y()) / oldScale,
+  }
+
+  stageNode.scale({ x: clampedScale, y: clampedScale })
+  stageConfig.value.scaleX = clampedScale
+  stageConfig.value.scaleY = clampedScale
+
+  const newPos = {
+    x: pointer.x - mousePointTo.x * clampedScale,
+    y: pointer.y - mousePointTo.y * clampedScale,
+  }
+
+  stageNode.position(newPos)
 }
 
 const handleMouseUp = () => {
@@ -861,23 +852,6 @@ const handleMouseUp = () => {
             id: Date.now().toString(),
             type: 'line',
             points: [...currentPoints.value],
-          })
-        } else if (store.currentTool === 'room') {
-          // Calculate area in square meters
-          const widthInPixels = Math.abs(dx)
-          const heightInPixels = Math.abs(dy)
-          const widthInMeters = widthInPixels * store.metersPerPixel
-          const heightInMeters = heightInPixels * store.metersPerPixel
-          const areaSqm = widthInMeters * heightInMeters
-
-          store.addElement({
-            id: Date.now().toString(),
-            type: 'room',
-            x: Math.min(x1, x2),
-            y: Math.min(y1, y2),
-            width: widthInPixels,
-            height: heightInPixels,
-            area: areaSqm,
           })
         }
       }
@@ -989,6 +963,10 @@ const cancelPolygon = () => {
 
 // Keyboard handler
 const handleKeyDown = (e) => {
+  if (e.key === ' ' || e.code === 'Space') {
+    spacebarPressed.value = true
+    e.preventDefault() // Prevent page scroll
+  }
   if (e.key === 'Escape') {
     cancelPolygon()
   }
@@ -997,6 +975,12 @@ const handleKeyDown = (e) => {
       store.removeElement(store.selectedElementId)
       store.clearSelection()
     }
+  }
+}
+
+const handleKeyUp = (e) => {
+  if (e.key === ' ' || e.code === 'Space') {
+    spacebarPressed.value = false
   }
 }
 
@@ -1014,8 +998,9 @@ onMounted(() => {
   stageConfig.value.width = container.value.offsetWidth
   stageConfig.value.height = container.value.offsetHeight
 
-  // Add keyboard listener
+  // Add keyboard listeners
   window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
 })
 
 // Watch for tool changes and cancel polygon

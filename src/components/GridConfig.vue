@@ -59,6 +59,18 @@
           class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
+
+      <!-- Wall Thickness -->
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Wall Thickness (px)</label>
+        <input
+          v-model.number="store.wallThickness"
+          type="number"
+          min="1"
+          max="20"
+          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
     </div>
   </div>
 </template>

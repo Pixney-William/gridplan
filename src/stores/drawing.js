@@ -8,9 +8,10 @@ export const useDrawingStore = defineStore('drawing', {
     scale: '1:100',      // drawing scale
     maxSqm: 200,         // maximum square meters
     pricePerSqm: 25000,  // SEK per square meter
+    wallThickness: 2,    // wall stroke width in pixels
 
     // Drawing tool
-    currentTool: 'select', // 'select', 'line', 'door', 'window', 'room', 'room-polygon', 'calibrate'
+    currentTool: 'select', // 'select', 'line', 'door', 'window', 'room-polygon', 'calibrate'
 
     // Drawing elements
     elements: [],
@@ -50,11 +51,11 @@ export const useDrawingStore = defineStore('drawing', {
   getters: {
     totalSqm: (state) => {
       // Calculate total square meters from wall polygons only (outer perimeter)
-      // Room polygons and rectangle rooms are just labels/divisions
+      // Room polygons are just labels/divisions
       let total = 0
 
       state.elements.forEach(element => {
-        // Only count wall polygons (line tool), not room polygons or rectangle rooms
+        // Only count wall polygons (line tool), not room polygons
         if (element.type === 'polygon' && element.area) {
           total += element.area
         }
@@ -203,14 +204,6 @@ export const useDrawingStore = defineStore('drawing', {
             ...element,
             area: this.calculatePolygonArea(element.points)
           }
-        } else if (element.type === 'room') {
-          // Recalculate rectangle room area
-          const widthInMeters = element.width * this.metersPerPixel
-          const heightInMeters = element.height * this.metersPerPixel
-          return {
-            ...element,
-            area: widthInMeters * heightInMeters
-          }
         }
         return element
       })
@@ -257,6 +250,7 @@ export const useDrawingStore = defineStore('drawing', {
       this.scale = drawing.settings?.scale || '1:100'
       this.maxSqm = drawing.settings?.maxSqm || 200
       this.pricePerSqm = drawing.settings?.pricePerSqm || 25000
+      this.wallThickness = drawing.settings?.wallThickness || 2
       this.currentDrawingId = drawing.id
       this.currentDrawingName = drawing.name
 
@@ -274,6 +268,7 @@ export const useDrawingStore = defineStore('drawing', {
           scale: this.scale,
           maxSqm: this.maxSqm,
           pricePerSqm: this.pricePerSqm,
+          wallThickness: this.wallThickness,
         },
         elements: this.elements,
         total_sqm: this.totalSqm,
