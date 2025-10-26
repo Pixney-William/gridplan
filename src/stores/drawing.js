@@ -364,7 +364,7 @@ export const useDrawingStore = defineStore('drawing', {
         this.currentFloorId = '1'
       } else {
         this.floors = drawing.floors || [{ id: '1', name: 'Floor 1', elements: [] }]
-        this.currentFloorId = drawing.currentFloorId || this.floors[0].id
+        this.currentFloorId = drawing.current_floor_id || drawing.currentFloorId || this.floors[0].id
       }
 
       this.gridSize = drawing.settings?.gridSize || 20
@@ -396,7 +396,7 @@ export const useDrawingStore = defineStore('drawing', {
           innerWallThickness: this.innerWallThickness,
         },
         floors: this.floors,
-        currentFloorId: this.currentFloorId,
+        current_floor_id: this.currentFloorId,
         total_sqm: this.totalBuildingSqm,
       }
     },

@@ -79,6 +79,15 @@
       >
         ⎘
       </Button>
+      <Button
+        @click="handleDeleteFloor"
+        variant="destructive"
+        size="sm"
+        title="Delete current floor"
+        :disabled="store.floors.length === 1"
+      >
+        🗑
+      </Button>
     </div>
 
     <Separator orientation="vertical" class="h-6" />
@@ -192,6 +201,13 @@ const handleExport = () => {
 const handleClear = () => {
   if (confirm('Clear all elements? This cannot be undone.')) {
     store.clearDrawing()
+  }
+}
+
+const handleDeleteFloor = () => {
+  if (store.floors.length === 1) return
+  if (confirm(`Delete ${store.currentFloor.name}? This cannot be undone.`)) {
+    store.deleteFloor(store.currentFloorId)
   }
 }
 </script>
