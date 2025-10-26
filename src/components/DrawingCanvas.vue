@@ -1,5 +1,17 @@
 <template>
   <div ref="container" class="w-full h-full bg-white relative">
+    <!-- Delete button (only when element selected) -->
+    <div v-if="store.selectedElementId" class="absolute top-5 right-5 z-10">
+      <button
+        @click="deleteSelected"
+        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded shadow-lg flex items-center gap-2"
+        title="Delete Selected (Delete key)"
+      >
+        <span class="text-lg">🗑</span>
+        Delete
+      </button>
+    </div>
+
     <!-- Zoom controls -->
     <div class="absolute bottom-5 right-5 flex flex-col gap-1 z-10">
       <button
@@ -953,6 +965,14 @@ const resetZoom = () => {
   stageNode.position({ x: 0, y: 0 })
 }
 
+// Delete selected element
+const deleteSelected = () => {
+  if (store.selectedElementId) {
+    store.removeElement(store.selectedElementId)
+    store.clearSelection()
+  }
+}
+
 // Cancel polygon drawing
 const cancelPolygon = () => {
   if (isDrawingPolygon.value) {
@@ -971,6 +991,12 @@ const cancelPolygon = () => {
 const handleKeyDown = (e) => {
   if (e.key === 'Escape') {
     cancelPolygon()
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (store.selectedElementId) {
+      store.removeElement(store.selectedElementId)
+      store.clearSelection()
+    }
   }
 }
 
