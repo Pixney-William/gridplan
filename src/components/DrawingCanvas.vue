@@ -13,7 +13,7 @@
     </div>
 
     <!-- Zoom controls -->
-    <div class="absolute bottom-5 right-5 flex flex-col gap-1 z-10">
+    <div class="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-row gap-2 z-10">
       <button
         @click="zoomIn"
         class="w-10 h-10 bg-white/90 hover:bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center text-lg font-bold text-gray-700 hover:text-gray-900"
@@ -35,7 +35,7 @@
       >
         ⊙
       </button>
-      <div class="text-xs text-center text-gray-600 bg-white/90 px-2 py-1 rounded">
+      <div class="text-xs text-center text-gray-600 bg-white/90 px-3 py-2 rounded border border-gray-300 shadow-lg flex items-center min-w-[50px]">
         {{ Math.round(stageConfig.scaleX * 100) }}%
       </div>
     </div>
