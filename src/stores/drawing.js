@@ -187,7 +187,28 @@ export const useDrawingStore = defineStore('drawing', {
     },
 
     updateSettings(settings) {
+      const oldGridUnit = this.gridUnit
       Object.assign(this, settings)
+
+      // If gridUnit changed, recalculate all areas
+      if (settings.gridUnit !== undefined && settings.gridUnit !== oldGridUnit) {
+        this.recalculateAllAreas()
+      }
+    },
+
+    recalculateAllAreas() {
+      // Recalculate area for all elements when scale changes
+      this.elements.forEach(element => {
+        if (element.type === 'polygon' || element.type === 'room-polygon') {
+          // Recalculate polygon area
+          element.area = this.calculatePolygonArea(element.points)
+        } else if (element.type === 'room') {
+          // Recalculate rectangle room area
+          const widthInMeters = element.width * this.metersPerPixel
+          const heightInMeters = element.height * this.metersPerPixel
+          element.area = widthInMeters * heightInMeters
+        }
+      })
     },
 
     clearDrawing() {
