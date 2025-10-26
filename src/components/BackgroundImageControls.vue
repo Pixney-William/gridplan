@@ -1,9 +1,9 @@
 <template>
-  <div class="p-4 border-b border-gray-200">
-    <h3 class="text-sm font-semibold text-gray-700 mb-3">Reference Image</h3>
+  <div class="p-3 border-b border-gray-200">
+    <h3 class="text-xs font-semibold text-gray-700 mb-2">Reference Image</h3>
 
     <!-- Upload section -->
-    <div v-if="!store.backgroundImage.dataUrl" class="mb-4">
+    <div v-if="!store.backgroundImage.dataUrl" class="mb-2">
       <input
         type="file"
         ref="fileInput"
@@ -14,13 +14,14 @@
       <Button
         @click="$refs.fileInput.click()"
         class="w-full"
+        size="sm"
       >
         Upload Image
       </Button>
     </div>
 
     <!-- Image controls -->
-    <div v-if="store.backgroundImage.dataUrl" class="space-y-3">
+    <div v-if="store.backgroundImage.dataUrl" class="space-y-2">
       <!-- Opacity slider -->
       <div>
         <label class="text-xs text-gray-600 block mb-1">
@@ -40,6 +41,7 @@
       <Button
         @click="toggleLock"
         class="w-full"
+        size="sm"
         :variant="store.backgroundImage.locked ? 'destructive' : 'secondary'"
       >
         {{ store.backgroundImage.locked ? 'Unlock Image' : 'Lock Image' }}
@@ -49,21 +51,23 @@
       <Button
         @click="clearImage"
         class="w-full"
+        size="sm"
         variant="secondary"
       >
         Remove Image
       </Button>
 
       <!-- Calibration section -->
-      <div class="mt-4 pt-4 border-t border-gray-200">
+      <div class="mt-2 pt-2 border-t border-gray-200">
         <h4 class="text-xs font-semibold text-gray-700 mb-2">Calibration</h4>
 
         <!-- Reference line method -->
-        <div class="mb-3 space-y-2">
+        <div class="mb-2 space-y-1">
           <Label class="text-xs">Reference Line Method:</Label>
           <Button
             @click="startCalibration"
             class="w-full"
+            size="sm"
             :variant="store.currentTool === 'calibrate' ? 'default' : 'secondary'"
           >
             {{ store.currentTool === 'calibrate' ? 'Drawing Reference...' : 'Draw Reference Line' }}
@@ -71,17 +75,19 @@
         </div>
 
         <!-- Manual method -->
-        <div class="space-y-2">
+        <div class="space-y-1">
           <Label class="text-xs">Manual Method:</Label>
           <Input
             v-model.number="manualMetersPerGrid"
             type="number"
             step="0.1"
             placeholder="Meters per grid square"
+            class="h-8"
           />
           <Button
             @click="applyManualCalibration"
             class="w-full"
+            size="sm"
           >
             Apply
           </Button>

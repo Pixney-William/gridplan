@@ -1,10 +1,10 @@
 <template>
-  <div class="p-4 border-b border-gray-200">
-    <h2 class="text-sm font-semibold text-gray-800 mb-3">Grid Settings</h2>
+  <div class="p-3 border-b border-gray-200">
+    <h2 class="text-xs font-semibold text-gray-800 mb-2">Grid Settings</h2>
 
-    <div class="space-y-4">
+    <div class="space-y-2">
       <!-- Grid Size -->
-      <div class="space-y-2">
+      <div class="space-y-1">
         <Label for="grid-size" class="text-xs">Grid Size (px)</Label>
         <Input
           id="grid-size"
@@ -12,11 +12,12 @@
           type="number"
           min="5"
           max="100"
+          class="h-8"
         />
       </div>
 
       <!-- Grid Unit -->
-      <div class="space-y-2">
+      <div class="space-y-1">
         <Label for="grid-unit" class="text-xs">Meters per Square</Label>
         <Input
           id="grid-unit"
@@ -24,32 +25,35 @@
           type="number"
           min="0.1"
           step="0.1"
+          class="h-8"
         />
       </div>
 
       <!-- Scale -->
-      <div class="space-y-2">
+      <div class="space-y-1">
         <Label for="scale" class="text-xs">Scale</Label>
         <Input
           id="scale"
           v-model="store.scale"
           type="text"
+          class="h-8"
         />
       </div>
 
       <!-- Max SQM -->
-      <div class="space-y-2">
+      <div class="space-y-1">
         <Label for="max-sqm" class="text-xs">Max m² Warning</Label>
         <Input
           id="max-sqm"
           v-model.number="store.maxSqm"
           type="number"
           min="1"
+          class="h-8"
         />
       </div>
 
       <!-- Price per SQM -->
-      <div class="space-y-2">
+      <div class="space-y-1">
         <Label for="price-per-sqm" class="text-xs">Price per m² (SEK)</Label>
         <Input
           id="price-per-sqm"
@@ -57,18 +61,37 @@
           type="number"
           min="0"
           step="1000"
+          class="h-8"
         />
       </div>
 
       <!-- Wall Thickness -->
-      <div class="space-y-2">
-        <Label for="wall-thickness" class="text-xs">Wall Thickness (px)</Label>
+      <div class="space-y-1">
+        <Label for="wall-thickness" class="text-xs">Outer Wall (px)</Label>
         <Input
           id="wall-thickness"
           v-model.number="store.wallThickness"
           type="number"
           min="1"
           max="20"
+          step="1"
+          class="h-8"
+          @blur="validateWallThickness"
+        />
+      </div>
+
+      <!-- Inner Wall Thickness -->
+      <div class="space-y-1">
+        <Label for="inner-wall-thickness" class="text-xs">Inner Wall (px)</Label>
+        <Input
+          id="inner-wall-thickness"
+          v-model.number="store.innerWallThickness"
+          type="number"
+          min="1"
+          max="20"
+          step="1"
+          class="h-8"
+          @blur="validateInnerWallThickness"
         />
       </div>
     </div>
@@ -82,6 +105,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const store = useDrawingStore()
+
+const validateWallThickness = () => {
+  if (!store.wallThickness || store.wallThickness < 1) {
+    store.wallThickness = 2
+  }
+}
+
+const validateInnerWallThickness = () => {
+  if (!store.innerWallThickness || store.innerWallThickness < 1) {
+    store.innerWallThickness = 1
+  }
+}
 
 // Watch for gridUnit changes and trigger recalculation
 watch(() => store.gridUnit, (newVal, oldVal) => {

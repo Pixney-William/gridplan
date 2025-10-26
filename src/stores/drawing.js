@@ -8,7 +8,8 @@ export const useDrawingStore = defineStore('drawing', {
     scale: '1:100',      // drawing scale
     maxSqm: 200,         // maximum square meters
     pricePerSqm: 25000,  // SEK per square meter
-    wallThickness: 2,    // wall stroke width in pixels
+    wallThickness: 2,    // outer wall stroke width in pixels
+    innerWallThickness: 1, // inner wall stroke width in pixels
 
     // Drawing tool
     currentTool: 'select', // 'select', 'line', 'door', 'window', 'room-polygon', 'calibrate'
@@ -251,6 +252,7 @@ export const useDrawingStore = defineStore('drawing', {
       this.maxSqm = drawing.settings?.maxSqm || 200
       this.pricePerSqm = drawing.settings?.pricePerSqm || 25000
       this.wallThickness = drawing.settings?.wallThickness || 2
+      this.innerWallThickness = drawing.settings?.innerWallThickness || 1
       this.currentDrawingId = drawing.id
       this.currentDrawingName = drawing.name
 
@@ -269,6 +271,7 @@ export const useDrawingStore = defineStore('drawing', {
           maxSqm: this.maxSqm,
           pricePerSqm: this.pricePerSqm,
           wallThickness: this.wallThickness,
+          innerWallThickness: this.innerWallThickness,
         },
         elements: this.elements,
         total_sqm: this.totalSqm,

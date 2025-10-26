@@ -134,7 +134,7 @@
             :config="{
               points: element.points,
               stroke: store.selectedElementId === element.id ? '#7e22ce' : '#9333ea',
-              strokeWidth: store.selectedElementId === element.id ? store.wallThickness + 2 : store.wallThickness,
+              strokeWidth: store.selectedElementId === element.id ? (store.wallThickness || 2) + 2 : (store.wallThickness || 2),
               fill: '#f3e8ff',
               opacity: 0.4,
               closed: true,
@@ -161,7 +161,7 @@
             :config="{
               points: element.points,
               stroke: store.selectedElementId === element.id ? '#059669' : '#16a34a',
-              strokeWidth: store.selectedElementId === element.id ? 4 : 2,
+              strokeWidth: store.selectedElementId === element.id ? (store.innerWallThickness || 1) + 2 : (store.innerWallThickness || 1),
               fill: '#dcfce7',
               opacity: 0.3,
               closed: true,
@@ -185,7 +185,7 @@
           :config="{
             points: currentPolygonPoints,
             stroke: '#9333ea',
-            strokeWidth: store.wallThickness,
+            strokeWidth: store.wallThickness || 2,
             dash: [5, 5],
           }"
         />

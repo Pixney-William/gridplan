@@ -1,6 +1,7 @@
 <template>
   <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
     <div class="flex items-center gap-2">
+      <SidebarTrigger />
       <Button @click="goToDashboard" variant="ghost" size="sm">
         ← Dashboard
       </Button>
@@ -10,43 +11,43 @@
     <Separator orientation="vertical" class="h-6" />
 
     <!-- Drawing tools -->
-    <div class="flex items-center gap-2">
+    <ButtonGroup>
       <Button
         @click="store.setTool('select')"
-        :variant="store.currentTool === 'select' ? 'default' : 'secondary'"
+        :variant="store.currentTool === 'select' ? 'default' : 'outline'"
         size="sm"
       >
         Select
       </Button>
       <Button
         @click="store.setTool('line')"
-        :variant="store.currentTool === 'line' ? 'default' : 'secondary'"
+        :variant="store.currentTool === 'line' ? 'default' : 'outline'"
         size="sm"
       >
         Line
       </Button>
       <Button
         @click="store.setTool('door')"
-        :variant="store.currentTool === 'door' ? 'default' : 'secondary'"
+        :variant="store.currentTool === 'door' ? 'default' : 'outline'"
         size="sm"
       >
         Door
       </Button>
       <Button
         @click="store.setTool('window')"
-        :variant="store.currentTool === 'window' ? 'default' : 'secondary'"
+        :variant="store.currentTool === 'window' ? 'default' : 'outline'"
         size="sm"
       >
         Window
       </Button>
       <Button
         @click="store.setTool('room-polygon')"
-        :variant="store.currentTool === 'room-polygon' ? 'default' : 'secondary'"
+        :variant="store.currentTool === 'room-polygon' ? 'default' : 'outline'"
         size="sm"
       >
         Room Polygon
       </Button>
-    </div>
+    </ButtonGroup>
 
     <Separator orientation="vertical" class="h-6" />
 
@@ -108,6 +109,8 @@ import { useDrawingStore } from '../stores/drawing'
 import { drawingService } from '../utils/drawingService'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { ButtonGroup } from '@/components/ui/button-group'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 
 const router = useRouter()
 const store = useDrawingStore()
