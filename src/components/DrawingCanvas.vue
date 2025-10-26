@@ -1,12 +1,39 @@
 <template>
-  <div ref="container" class="w-full h-full bg-white">
+  <div ref="container" class="w-full h-full bg-white relative">
+    <!-- Zoom controls -->
+    <div class="absolute bottom-5 right-5 flex flex-col gap-1 z-10">
+      <button
+        @click="zoomIn"
+        class="w-10 h-10 bg-white/90 hover:bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center text-lg font-bold text-gray-700 hover:text-gray-900"
+        title="Zoom In"
+      >
+        +
+      </button>
+      <button
+        @click="zoomOut"
+        class="w-10 h-10 bg-white/90 hover:bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center text-lg font-bold text-gray-700 hover:text-gray-900"
+        title="Zoom Out"
+      >
+        −
+      </button>
+      <button
+        @click="resetZoom"
+        class="w-10 h-10 bg-white/90 hover:bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center text-lg font-bold text-gray-700 hover:text-gray-900"
+        title="Reset Zoom"
+      >
+        ⊙
+      </button>
+      <div class="text-xs text-center text-gray-600 bg-white/90 px-2 py-1 rounded">
+        {{ Math.round(stageConfig.scaleX * 100) }}%
+      </div>
+    </div>
+
     <v-stage
       ref="stage"
       :config="stageConfig"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
-      @wheel="handleWheel"
     >
       <!-- Background image layer -->
       <v-layer ref="backgroundLayer">
@@ -848,36 +875,82 @@ const handleMouseUp = () => {
   }
 }
 
-const handleWheel = (e) => {
-  e.evt.preventDefault()
-
+// Zoom controls (button-based)
+const zoomIn = () => {
   const stageNode = stage.value?.getNode()
   if (!stageNode) return
 
   const oldScale = stageNode.scaleX()
-  const pointer = stageNode.getPointerPosition()
-
-  const mousePointTo = {
-    x: (pointer.x - stageNode.x()) / oldScale,
-    y: (pointer.y - stageNode.y()) / oldScale,
-  }
-
-  const direction = e.evt.deltaY > 0 ? -1 : 1
-  const newScale = direction > 0 ? oldScale * 1.1 : oldScale / 1.1
+  const newScale = oldScale * 1.2
 
   // Limit zoom
   const clampedScale = Math.max(0.1, Math.min(5, newScale))
+
+  // Zoom toward center of viewport
+  const center = {
+    x: stageConfig.value.width / 2,
+    y: stageConfig.value.height / 2,
+  }
+
+  const pointTo = {
+    x: (center.x - stageNode.x()) / oldScale,
+    y: (center.y - stageNode.y()) / oldScale,
+  }
 
   stageNode.scale({ x: clampedScale, y: clampedScale })
   stageConfig.value.scaleX = clampedScale
   stageConfig.value.scaleY = clampedScale
 
   const newPos = {
-    x: pointer.x - mousePointTo.x * clampedScale,
-    y: pointer.y - mousePointTo.y * clampedScale,
+    x: center.x - pointTo.x * clampedScale,
+    y: center.y - pointTo.y * clampedScale,
   }
 
   stageNode.position(newPos)
+}
+
+const zoomOut = () => {
+  const stageNode = stage.value?.getNode()
+  if (!stageNode) return
+
+  const oldScale = stageNode.scaleX()
+  const newScale = oldScale / 1.2
+
+  // Limit zoom
+  const clampedScale = Math.max(0.1, Math.min(5, newScale))
+
+  // Zoom toward center of viewport
+  const center = {
+    x: stageConfig.value.width / 2,
+    y: stageConfig.value.height / 2,
+  }
+
+  const pointTo = {
+    x: (center.x - stageNode.x()) / oldScale,
+    y: (center.y - stageNode.y()) / oldScale,
+  }
+
+  stageNode.scale({ x: clampedScale, y: clampedScale })
+  stageConfig.value.scaleX = clampedScale
+  stageConfig.value.scaleY = clampedScale
+
+  const newPos = {
+    x: center.x - pointTo.x * clampedScale,
+    y: center.y - pointTo.y * clampedScale,
+  }
+
+  stageNode.position(newPos)
+}
+
+const resetZoom = () => {
+  const stageNode = stage.value?.getNode()
+  if (!stageNode) return
+
+  stageNode.scale({ x: 1, y: 1 })
+  stageConfig.value.scaleX = 1
+  stageConfig.value.scaleY = 1
+
+  stageNode.position({ x: 0, y: 0 })
 }
 
 // Cancel polygon drawing
