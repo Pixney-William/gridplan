@@ -197,6 +197,23 @@
           }"
         />
 
+        <!-- Vertex handles for selected polygon -->
+        <template v-if="store.selectedElementId && store.selectedElement">
+          <v-circle
+            v-if="(store.selectedElement.type === 'polygon' || store.selectedElement.type === 'room-polygon')"
+            v-for="(_, i) in store.selectedElement.points.filter((_, idx) => idx % 2 === 0)"
+            :key="'vertex-' + i"
+            :config="{
+              x: store.selectedElement.points[i * 2],
+              y: store.selectedElement.points[i * 2 + 1],
+              radius: 6,
+              fill: '#fff',
+              stroke: store.selectedElement.type === 'polygon' ? '#9333ea' : '#16a34a',
+              strokeWidth: 2,
+            }"
+          />
+        </template>
+
         <!-- Current drawing preview -->
         <v-line
           v-if="isDrawing && currentPoints.length > 0 && store.currentTool === 'line'"
@@ -253,6 +270,9 @@ const isDrawingRoomPolygon = ref(false)
 const isDragging = ref(false)
 const dragStartPos = ref({ x: 0, y: 0 })
 const dragElementStart = ref(null)
+const isDraggingVertex = ref(false)
+const selectedVertexIndex = ref(-1)
+const vertexDragStart = ref({ x: 0, y: 0 })
 
 // Grid lines
 const gridLines = computed(() => {
@@ -393,6 +413,31 @@ const getElementAtPosition = (x, y) => {
   return null
 }
 
+// Check if point is near a vertex (for vertex selection)
+const getVertexAtPosition = (x, y, element, threshold = 15) => {
+  if (!element) return -1
+
+  // Only check polygon types
+  if (element.type !== 'polygon' && element.type !== 'room-polygon') {
+    return -1
+  }
+
+  const points = element.points
+  for (let i = 0; i < points.length; i += 2) {
+    const vx = points[i]
+    const vy = points[i + 1]
+    const dx = x - vx
+    const dy = y - vy
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (dist <= threshold) {
+      return i // Return the index in points array
+    }
+  }
+
+  return -1
+}
+
 // Get mouse position relative to stage
 const getRelativePointerPosition = () => {
   const stageNode = stage.value?.getNode()
@@ -421,6 +466,23 @@ const handleMouseDown = (e) => {
 
     // Select tool - handle element selection and dragging
     if (store.currentTool === 'select') {
+      // First, check if clicking on a vertex of the currently selected polygon
+      if (store.selectedElementId) {
+        const selectedEl = store.selectedElement
+        if (selectedEl && (selectedEl.type === 'polygon' || selectedEl.type === 'room-polygon')) {
+          const vertexIndex = getVertexAtPosition(pos.x, pos.y, selectedEl)
+          if (vertexIndex >= 0) {
+            // Start vertex dragging
+            isDraggingVertex.value = true
+            selectedVertexIndex.value = vertexIndex
+            vertexDragStart.value = { x: snappedX, y: snappedY }
+            dragElementStart.value = JSON.parse(JSON.stringify(selectedEl))
+            return
+          }
+        }
+      }
+
+      // Otherwise, select element
       const element = getElementAtPosition(pos.x, pos.y)
       if (element) {
         store.selectElement(element.id)
@@ -535,6 +597,33 @@ const handleMouseMove = (e) => {
     return
   }
 
+  // Handle dragging of vertex
+  if (isDraggingVertex.value && store.selectedElementId && dragElementStart.value && selectedVertexIndex.value >= 0) {
+    const pos = getRelativePointerPosition()
+    const snappedX = snapToGrid(pos.x)
+    const snappedY = snapToGrid(pos.y)
+
+    // Calculate delta from drag start
+    const dx = snappedX - vertexDragStart.value.x
+    const dy = snappedY - vertexDragStart.value.y
+
+    const element = dragElementStart.value
+    const newPoints = [...element.points]
+
+    // Update just the selected vertex by applying delta to original position
+    newPoints[selectedVertexIndex.value] = element.points[selectedVertexIndex.value] + dx
+    newPoints[selectedVertexIndex.value + 1] = element.points[selectedVertexIndex.value + 1] + dy
+
+    // Recalculate area for polygons
+    const area = store.calculatePolygonArea(newPoints)
+
+    store.updateElement(store.selectedElementId, {
+      points: newPoints,
+      area: area
+    })
+    return
+  }
+
   // Handle dragging of selected element
   if (isDragging.value && store.selectedElementId && dragElementStart.value) {
     const pos = getRelativePointerPosition()
@@ -625,7 +714,15 @@ const handleMouseUp = () => {
     return
   }
 
-  // Stop dragging
+  // Stop vertex dragging
+  if (isDraggingVertex.value) {
+    isDraggingVertex.value = false
+    selectedVertexIndex.value = -1
+    dragElementStart.value = null
+    return
+  }
+
+  // Stop element dragging
   if (isDragging.value) {
     isDragging.value = false
     dragElementStart.value = null
