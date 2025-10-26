@@ -1,7 +1,7 @@
 <template>
   <div ref="container" class="w-full h-full bg-white relative">
     <!-- Delete button (only when element selected) -->
-    <div v-if="store.selectedElementId" class="absolute top-5 right-5 z-10">
+    <div v-if="store.selectedElementId" class="absolute top-5 right-5 z-20">
       <button
         @click="deleteSelected"
         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded shadow-lg flex items-center gap-2"
