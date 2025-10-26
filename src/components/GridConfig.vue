@@ -2,73 +2,73 @@
   <div class="p-4 border-b border-gray-200">
     <h2 class="text-sm font-semibold text-gray-800 mb-3">Grid Settings</h2>
 
-    <div class="space-y-3">
+    <div class="space-y-4">
       <!-- Grid Size -->
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">Grid Size (px)</label>
-        <input
+      <div class="space-y-2">
+        <Label for="grid-size" class="text-xs">Grid Size (px)</Label>
+        <Input
+          id="grid-size"
           v-model.number="store.gridSize"
           type="number"
           min="5"
           max="100"
-          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <!-- Grid Unit -->
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">Meters per Square</label>
-        <input
+      <div class="space-y-2">
+        <Label for="grid-unit" class="text-xs">Meters per Square</Label>
+        <Input
+          id="grid-unit"
           v-model.number="store.gridUnit"
           type="number"
           min="0.1"
           step="0.1"
-          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <!-- Scale -->
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">Scale</label>
-        <input
+      <div class="space-y-2">
+        <Label for="scale" class="text-xs">Scale</Label>
+        <Input
+          id="scale"
           v-model="store.scale"
           type="text"
-          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <!-- Max SQM -->
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">Max m² Warning</label>
-        <input
+      <div class="space-y-2">
+        <Label for="max-sqm" class="text-xs">Max m² Warning</Label>
+        <Input
+          id="max-sqm"
           v-model.number="store.maxSqm"
           type="number"
           min="1"
-          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <!-- Price per SQM -->
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">Price per m² (SEK)</label>
-        <input
+      <div class="space-y-2">
+        <Label for="price-per-sqm" class="text-xs">Price per m² (SEK)</Label>
+        <Input
+          id="price-per-sqm"
           v-model.number="store.pricePerSqm"
           type="number"
           min="0"
           step="1000"
-          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <!-- Wall Thickness -->
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">Wall Thickness (px)</label>
-        <input
+      <div class="space-y-2">
+        <Label for="wall-thickness" class="text-xs">Wall Thickness (px)</Label>
+        <Input
+          id="wall-thickness"
           v-model.number="store.wallThickness"
           type="number"
           min="1"
           max="20"
-          class="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
     </div>
@@ -78,6 +78,8 @@
 <script setup>
 import { watch } from 'vue'
 import { useDrawingStore } from '../stores/drawing'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 const store = useDrawingStore()
 

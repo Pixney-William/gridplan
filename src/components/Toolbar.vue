@@ -1,125 +1,120 @@
 <template>
   <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
     <div class="flex items-center gap-2">
+      <Button @click="goToDashboard" variant="ghost" size="sm">
+        ← Dashboard
+      </Button>
       <h1 class="text-xl font-bold text-gray-800">GridPlan</h1>
     </div>
 
-    <div class="h-6 w-px bg-gray-300"></div>
+    <Separator orientation="vertical" class="h-6" />
 
     <!-- Drawing tools -->
     <div class="flex items-center gap-2">
-      <button
+      <Button
         @click="store.setTool('select')"
-        :class="[
-          'px-4 py-2 rounded text-sm font-medium transition-colors',
-          store.currentTool === 'select'
-            ? 'bg-gray-800 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
+        :variant="store.currentTool === 'select' ? 'default' : 'secondary'"
+        size="sm"
       >
         Select
-      </button>
-      <button
+      </Button>
+      <Button
         @click="store.setTool('line')"
-        :class="[
-          'px-4 py-2 rounded text-sm font-medium transition-colors',
-          store.currentTool === 'line'
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
+        :variant="store.currentTool === 'line' ? 'default' : 'secondary'"
+        size="sm"
       >
         Line
-      </button>
-      <button
+      </Button>
+      <Button
         @click="store.setTool('door')"
-        :class="[
-          'px-4 py-2 rounded text-sm font-medium transition-colors',
-          store.currentTool === 'door'
-            ? 'bg-indigo-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
+        :variant="store.currentTool === 'door' ? 'default' : 'secondary'"
+        size="sm"
       >
         Door
-      </button>
-      <button
+      </Button>
+      <Button
         @click="store.setTool('window')"
-        :class="[
-          'px-4 py-2 rounded text-sm font-medium transition-colors',
-          store.currentTool === 'window'
-            ? 'bg-cyan-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
+        :variant="store.currentTool === 'window' ? 'default' : 'secondary'"
+        size="sm"
       >
         Window
-      </button>
-      <button
+      </Button>
+      <Button
         @click="store.setTool('room-polygon')"
-        :class="[
-          'px-4 py-2 rounded text-sm font-medium transition-colors',
-          store.currentTool === 'room-polygon'
-            ? 'bg-green-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
+        :variant="store.currentTool === 'room-polygon' ? 'default' : 'secondary'"
+        size="sm"
       >
         Room Polygon
-      </button>
+      </Button>
     </div>
 
-    <div class="h-6 w-px bg-gray-300"></div>
+    <Separator orientation="vertical" class="h-6" />
 
     <!-- Undo/Redo -->
     <div class="flex items-center gap-2">
-      <button
+      <Button
         @click="store.undo()"
         :disabled="!store.canUndo()"
-        class="px-4 py-2 rounded text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        variant="secondary"
+        size="sm"
       >
         Undo
-      </button>
-      <button
+      </Button>
+      <Button
         @click="store.redo()"
         :disabled="!store.canRedo()"
-        class="px-4 py-2 rounded text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        variant="secondary"
+        size="sm"
       >
         Redo
-      </button>
+      </Button>
     </div>
 
-    <div class="h-6 w-px bg-gray-300"></div>
+    <Separator orientation="vertical" class="h-6" />
 
     <!-- Save/Export -->
     <div class="flex items-center gap-2">
-      <button
+      <Button
         @click="handleSave"
-        class="px-4 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700"
+        size="sm"
       >
         Save
-      </button>
-      <button
+      </Button>
+      <Button
         @click="handleExport"
-        class="px-4 py-2 rounded text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+        variant="secondary"
+        size="sm"
       >
         Export PNG
-      </button>
+      </Button>
     </div>
 
     <div class="flex-1"></div>
 
     <!-- Clear -->
-    <button
+    <Button
       @click="handleClear"
-      class="px-4 py-2 rounded text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200"
+      variant="destructive"
+      size="sm"
     >
       Clear
-    </button>
+    </Button>
   </div>
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import { useDrawingStore } from '../stores/drawing'
 import { drawingService } from '../utils/drawingService'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 
+const router = useRouter()
 const store = useDrawingStore()
+
+const goToDashboard = () => {
+  router.push('/')
+}
 
 const handleSave = async () => {
   try {

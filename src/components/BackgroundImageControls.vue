@@ -11,12 +11,12 @@
         @change="handleImageUpload"
         class="hidden"
       />
-      <button
+      <Button
         @click="$refs.fileInput.click()"
-        class="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+        class="w-full"
       >
         Upload Image
-      </button>
+      </Button>
     </div>
 
     <!-- Image controls -->
@@ -37,60 +37,54 @@
       </div>
 
       <!-- Lock toggle -->
-      <button
+      <Button
         @click="toggleLock"
-        class="w-full px-3 py-2 text-sm rounded"
-        :class="store.backgroundImage.locked
-          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        class="w-full"
+        :variant="store.backgroundImage.locked ? 'destructive' : 'secondary'"
       >
         {{ store.backgroundImage.locked ? 'Unlock Image' : 'Lock Image' }}
-      </button>
+      </Button>
 
       <!-- Clear button -->
-      <button
+      <Button
         @click="clearImage"
-        class="w-full px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+        class="w-full"
+        variant="secondary"
       >
         Remove Image
-      </button>
+      </Button>
 
       <!-- Calibration section -->
       <div class="mt-4 pt-4 border-t border-gray-200">
         <h4 class="text-xs font-semibold text-gray-700 mb-2">Calibration</h4>
 
         <!-- Reference line method -->
-        <div class="mb-3">
-          <p class="text-xs text-gray-600 mb-2">Reference Line Method:</p>
-          <button
+        <div class="mb-3 space-y-2">
+          <Label class="text-xs">Reference Line Method:</Label>
+          <Button
             @click="startCalibration"
-            class="w-full px-3 py-2 text-sm rounded"
-            :class="store.currentTool === 'calibrate'
-              ? 'bg-orange-600 text-white'
-              : 'bg-orange-100 text-orange-700 hover:bg-orange-200'"
+            class="w-full"
+            :variant="store.currentTool === 'calibrate' ? 'default' : 'secondary'"
           >
             {{ store.currentTool === 'calibrate' ? 'Drawing Reference...' : 'Draw Reference Line' }}
-          </button>
+          </Button>
         </div>
 
         <!-- Manual method -->
-        <div>
-          <p class="text-xs text-gray-600 mb-2">Manual Method:</p>
-          <div class="space-y-2">
-            <input
-              v-model.number="manualMetersPerGrid"
-              type="number"
-              step="0.1"
-              placeholder="Meters per grid square"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-            />
-            <button
-              @click="applyManualCalibration"
-              class="w-full px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-            >
-              Apply
-            </button>
-          </div>
+        <div class="space-y-2">
+          <Label class="text-xs">Manual Method:</Label>
+          <Input
+            v-model.number="manualMetersPerGrid"
+            type="number"
+            step="0.1"
+            placeholder="Meters per grid square"
+          />
+          <Button
+            @click="applyManualCalibration"
+            class="w-full"
+          >
+            Apply
+          </Button>
         </div>
       </div>
     </div>
@@ -100,6 +94,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useDrawingStore } from '../stores/drawing'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 const store = useDrawingStore()
 const fileInput = ref(null)
